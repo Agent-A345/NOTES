@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f0f11" id="theme-meta" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Notes" />
+  <meta name="description" content="Offline-first notes app. Works anywhere, anytime." />
+
+  <!-- PWA Manifest (inline via blob URL, generated in app.js) -->
+  <link rel="manifest" id="pwa-manifest" />
+
+  <!-- Apple Touch Icons (inline SVG via data URI) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f0f11'/%3E%3Crect x='120' y='140' width='272' height='32' rx='8' fill='%23f4c542'/%3E%3Crect x='120' y='200' width='200' height='20' rx='6' fill='%23ffffff' opacity='.6'/%3E%3Crect x='120' y='240' width='240' height='20' rx='6' fill='%23ffffff' opacity='.4'/%3E%3Crect x='120' y='280' width='180' height='20' rx='6' fill='%23ffffff' opacity='.3'/%3E%3Ccircle cx='376' cy='360' r='56' fill='%23f4c542'/%3E%3Ctext x='376' y='375' font-size='44' text-anchor='middle' fill='%230f0f11'%3E%2B%3C/text%3E%3C/svg%3E" />
+
+  <title>Notes — Offline</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-theme="dark">
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  TOAST NOTIFICATION                        -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  SYNC STATUS BAR                           -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="sync-bar" class="sync-bar hidden">
+    <span id="sync-text">Syncing notes…</span>
+    <div class="sync-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  MAIN LIST VIEW                            -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="view-list" class="view active">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="7" fill="var(--accent)"/>
+            <rect x="7" y="8" width="14" height="2.5" rx="1.25" fill="var(--bg)"/>
+            <rect x="7" y="12.75" width="10" height="2" rx="1" fill="var(--bg)" opacity=".7"/>
+            <rect x="7" y="17" width="12" height="2" rx="1" fill="var(--bg)" opacity=".5"/>
+          </svg>
+          <span class="brand-name">Notes</span>
+        </div>
+        <div class="header-actions">
+          <button id="btn-export" class="icon-btn" title="Export notes" aria-label="Export notes">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button id="btn-theme" class="icon-btn" title="Toggle dark/light mode" aria-label="Toggle theme">
+            <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <svg id="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="search-input" type="search" placeholder="Search notes…" autocomplete="off" aria-label="Search notes" />
+        <button id="search-clear" class="search-clear hidden" aria-label="Clear search">✕</button>
+      </div>
+
+      <!-- Stats -->
+      <div id="stats-bar" class="stats-bar">
+        <span id="stats-count">0 notes</span>
+        <span class="stats-sep">·</span>
+        <span id="stats-storage">calculating…</span>
+        <span class="stats-sep online-indicator" id="online-dot">●</span>
+        <span id="online-label">Online</span>
+      </div>
+    </header>
+
+    <!-- Notes Container -->
+    <main class="notes-main">
+      <!-- Pinned Section -->
+      <section id="section-pinned" class="notes-section hidden">
+        <h2 class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          Pinned
+        </h2>
+        <div id="notes-pinned" class="notes-grid"></div>
+      </section>
+
+      <!-- All Notes Section -->
+      <section id="section-all" class="notes-section">
+        <h2 class="section-label" id="all-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Notes
+        </h2>
+        <div id="notes-all" class="notes-grid"></div>
+      </section>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-icon">📝</div>
+        <p class="empty-title">No notes yet</p>
+        <p class="empty-sub">Tap + to create your first note</p>
+      </div>
+
+      <!-- No Search Results -->
+      <div id="no-results" class="empty-state hidden">
+        <div class="empty-icon">🔍</div>
+        <p class="empty-title">Nothing found</p>
+        <p class="empty-sub">Try different keywords</p>
+      </div>
+    </main>
+
+    <!-- FAB -->
+    <button id="btn-new" class="fab" aria-label="New note">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  EDITOR VIEW                               -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="view-editor" class="view">
+    <div class="editor-shell">
+
+      <!-- Editor Header -->
+      <header class="editor-header">
+        <button id="btn-back" class="back-btn" aria-label="Back to notes">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <span id="save-status" class="save-status">All saved</span>
+        <div class="editor-header-actions">
+          <button id="btn-pin" class="icon-btn" title="Pin note" aria-label="Pin note">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+            </svg>
+          </button>
+          <button id="btn-lock" class="icon-btn" title="Password protect" aria-label="Lock note">
+            <svg id="icon-lock-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+            </svg>
+            <svg id="icon-lock-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </button>
+          <button id="btn-delete" class="icon-btn danger" title="Delete note" aria-label="Delete note">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Metadata bar -->
+      <div id="editor-meta" class="editor-meta">
+        <span id="meta-created"></span>
+        <span id="meta-edited"></span>
+      </div>
+
+      <!-- Editor fields -->
+      <div class="editor-body">
+        <input id="note-title" type="text" placeholder="Title" class="note-title-input" maxlength="200" autocomplete="off" spellcheck="true" />
+        <textarea id="note-content" placeholder="Start writing…" class="note-content-input" spellcheck="true"></textarea>
+      </div>
+
+      <!-- Word count -->
+      <div class="editor-footer">
+        <span id="word-count">0 words</span>
+        <span id="char-count">0 chars</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  PASSWORD DIALOG                           -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="pw-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Password protection">
+    <div class="dialog">
+      <h3 id="pw-title">Set Password</h3>
+      <p id="pw-desc" class="dialog-desc">Enter a password to protect this note.</p>
+      <input id="pw-input" type="password" placeholder="Password" class="dialog-input" autocomplete="new-password" />
+      <input id="pw-confirm" type="password" placeholder="Confirm password" class="dialog-input" autocomplete="new-password" />
+      <div class="dialog-actions">
+        <button id="pw-cancel" class="btn-ghost">Cancel</button>
+        <button id="pw-submit" class="btn-primary">Protect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  UNLOCK DIALOG                             -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="unlock-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Unlock note">
+    <div class="dialog">
+      <h3>🔒 Locked Note</h3>
+      <p class="dialog-desc">Enter the password to view this note.</p>
+      <input id="unlock-input" type="password" placeholder="Password" class="dialog-input" autocomplete="current-password" />
+      <div class="dialog-actions">
+        <button id="unlock-cancel" class="btn-ghost">Cancel</button>
+        <button id="unlock-submit" class="btn-primary">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  EXPORT DIALOG                             -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="export-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Export notes">
+    <div class="dialog">
+      <h3>Export Notes</h3>
+      <p class="dialog-desc">Download all your notes.</p>
+      <div class="export-options">
+        <button id="export-json" class="export-btn">
+          <span class="export-icon">{ }</span>
+          <span>JSON</span>
+          <small>Machine-readable format</small>
+        </button>
+        <button id="export-txt" class="export-btn">
+          <span class="export-icon">Aa</span>
+          <span>Plain Text</span>
+          <small>Simple readable format</small>
+        </button>
+      </div>
+      <div class="dialog-actions">
+        <button id="export-cancel" class="btn-ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  CONFIRM DELETE DIALOG                     -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div id="confirm-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Confirm delete">
+    <div class="dialog">
+      <h3>Delete note?</h3>
+      <p class="dialog-desc">This action cannot be undone.</p>
+      <div class="dialog-actions">
+        <button id="confirm-cancel" class="btn-ghost">Cancel</button>
+        <button id="confirm-delete" class="btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  SERVICE WORKER REGISTRATION               -->
+  <!-- ═══════════════════════════════════════════ -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      // Inline service worker as a blob
+      const swCode = `
+const CACHE_NAME = 'notes-offline-v2';
+const APP_SHELL = ['/', '/index.html', '/style.css', '/app.js'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      const networkFetch = fetch(e.request).then(res => {
+        if (res && res.status === 200 && res.type !== 'opaque') {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => cached);
+      return cached || networkFetch;
+    })
+  );
+});
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      const swURL = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swURL, { scope: '/' })
+        .then(reg => console.log('[SW] Registered', reg.scope))
+        .catch(err => console.warn('[SW] Registration failed', err));
+    }
+  </script>
+</body>
+</html>
